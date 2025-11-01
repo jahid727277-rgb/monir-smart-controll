@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Change Password</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      transition: background-color 0.6s ease;
+      background: #ffffff; /* অনলাইন */
+    }
+    body.offline {
+      background: #ffe6e6; /* অফলাইন - হালকা লাল */
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 50px 40px;
+      border-radius: 20px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+      color: #2c3e50;
+      font-weight: 700;
+    }
+    h2 {
+      font-size: 24px;
+      margin-bottom: 30px;
+      color: #7f8c8d;
+      font-weight: 500;
+    }
+    input {
+      width: 100%;
+      padding: 16px;
+      margin: 12px 0;
+      font-size: 18px;
+      border: 2px solid #ddd;
+      border-radius: 12px;
+      transition: border 0.3s;
+    }
+    input:focus {
+      border-color: #27ae60;
+      outline: none;
+    }
+    button {
+      width: 100%;
+      padding: 16px;
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: white;
+      background: #27ae60;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #219653;
+    }
+    .msg {
+      margin-top: 20px;
+      font-size: 17px;
+      font-weight: 500;
+      min-height: 24px;
+    }
+    .success { color: #27ae60; }
+    .error { color: #e74c3c; }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+</head>
+<body>
+
+  <div class="card">
+    <h1>Nexsoon Admin Panel</h1>
+    <h2>Change Password</h2>
+    <input type="password" id="currentPass" placeholder="Current Password" />
+    <input type="password" id="newPass" placeholder="New Password" />
+    <input type="password" id="confirmPass" placeholder="Confirm New Password" />
+    <button onclick="changePassword()">Update Password</button>
+    <div class="msg" id="message"></div>
+  </div>
+
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBEjUf911-av1oV3dgr9IVXMNG8e25yLW0",
+      authDomain: "monir-smart-control.firebaseapp.com",
+      databaseURL: "https://monir-smart-control-default-rtdb.firebaseio.com",
+      projectId: "monir-smart-control",
+      storageBucket: "monir-smart-control.firebasestorage.app",
+      messagingSenderId: "435268128535",
+      appId: "1:435268128535:web:2a5f665c10295b704e7152"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // চেক করুন ডিভাইস অনলাইন কি না
+    function checkDeviceOnline() {
+      db.ref("lastSeen").on("value", snapshot => {
+        const lastSeen = snapshot.val();
+        if (!lastSeen) {
+          document.body.classList.add("offline");
+          return;
+        }
+        const diff = Date.now() - lastSeen;
+        if (diff > 7000) {
+          document.body.classList.add("offline");
+        } else {
+          document.body.classList.remove("offline");
+        }
+      });
+    }
+
+    // পাসওয়ার্ড চেঞ্জ
+    function changePassword() {
+      const current = document.getElementById("currentPass").value;
+      const newP = document.getElementById("newPass").value;
+      const confirm = document.getElementById("confirmPass").value;
+      const msg = document.getElementById("message");
+
+      if (!current || !newP || !confirm) {
+        showMsg("All fields are required!", "error");
+        return;
+      }
+
+      if (newP !== confirm) {
+        showMsg("New passwords do not match!", "error");
+        return;
+      }
+
+      if (newP.length < 4) {
+        showMsg("Password must be 4+ characters!", "error");
+        return;
+      }
+
+      db.ref("auth/password").once("value", snapshot => {
+        const stored = snapshot.val();
+
+        if (current !== stored) {
+          showMsg("Current password is wrong!", "error");
+          return;
+        }
+
+        db.ref("auth/password").set(newP)
+          .then(() => {
+            showMsg("Password updated successfully!", "success");
+            document.getElementById("currentPass").value = "";
+            document.getElementById("newPass").value = "";
+            document.getElementById("confirmPass").value = "";
+          })
+          .catch(() => {
+            showMsg("Update failed. Check internet.", "error");
+          });
+      });
+    }
+
+    function showMsg(text, type) {
+      const msg = document.getElementById("message");
+      msg.textContent = text;
+      msg.className = "msg " + type;
+      setTimeout(() => { msg.textContent = ""; }, 4000);
+    }
+
+    document.getElementById("confirmPass").addEventListener("keydown", e => {
+      if (e.key === "Enter") changePassword();
+    });
+
+    window.onload = checkDeviceOnline;
+  </script>
+</body>
+</html>
