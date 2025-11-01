@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Nexsoon</title>
+<style>
+    *:focus { outline: none; }
+    .switch input:focus + .slider { box-shadow: none; }
+    body {-webkit-tap-highlight-color: transparent; }
+    :root {
+      --background: #f0f2f5;
+      --card-bg: #ffffff;
+      --primary: #27ae60;
+      --text: #2d3436;
+      --off-color: #b2bec3;
+      --shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--background);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 20px;
+      transition: background-color 0.4s ease;
+    }
+    h1 { font-size: 84px; margin-bottom: 40px; color: var(--text); }
+    .container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 60px;
+      width: 100%;
+      max-width: 800px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 30px;
+      padding: 80px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .label {
+      font-size: 60px;
+      color: var(--text);
+      margin-bottom: 50px;
+      font-weight: bold;
+    }
+    .switch { position: relative; width: 220px; height: 110px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--off-color);
+      transition: 0.4s;
+      border-radius: 55px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 94px; width: 94px;
+      left: 8px; top: 8px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    }
+    input:checked + .slider { background-color: #3BFF3A; }
+    input:checked + .slider:before { transform: translateX(110px); }
+    .status {
+      margin-top: 50px;
+      font-size: 50px;
+      font-weight: 600;
+      color: var(--off-color);
+      transition: color 0.3s ease;
+    }
+    input:checked ~ .status { color: var(--primary); }
+    @media (max-width: 768px) {
+      .container { grid-template-columns: 1fr; }
+    }
+    /* slideshow */
+    .slideshow-container {
+      width: 100%;
+      max-width: 900px;
+      height: 300px;
+      margin-bottom: 40px;
+      overflow: hidden;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      position: relative;
+      background-color: #f0f2f5;
+    }
+    .slide {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 100%;
+      opacity: 0;
+      transition: all 1s ease;
+      object-fit: cover;
+    }
+    .slide.active { left: 0; opacity: 1; }
+    .slide.prev { left: -100%; opacity: 0; }
+
+    /* Skeletal loading */
+    .skeleton {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 20px;
+      background: linear-gradient(90deg, #e0e0e0 25%, #f8f8f8 50%, #e0e0e0 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s infinite;
+    }
+    @keyframes loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* offline notices */
+    #user-offline-notice, #offline-notice {
+      position: fixed; top: 0; left: 0; width: 100%;
+      text-align: center; padding: 20px; font-size: 36px;
+      font-weight: bold; z-index: 10000; display: none;
+    }
+    #user-offline-notice { background: #ffcccc; color: #c0392b; z-index:10001; }
+    #offline-notice { background: #ffb3b3; color: #c0392b; }
+</style>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+</head>
+<body>
+  <!-- 🔐 Login Page -->
+  <div id="login" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #ffffff; z-index: 9999;
+      display: flex; align-items: center; justify-content: center; padding: 40px;
+      flex-direction: column; transition: background-color 0.4s ease;">
+    <div class="slideshow-container" id="slideshow">
+      <div class="skeleton"></div>
+      <img class="slide active" src="https://raw.githubusercontent.com/facebook-f/My-Image/refs/heads/main/20250825_180955.jpg">
+      <img class="slide" src="https://raw.githubusercontent.com/facebook-f/My-Image/refs/heads/main/20250825_181025.jpg">
+      <img class="slide" src="https://raw.githubusercontent.com/facebook-f/My-Image/refs/heads/main/20250825_181154.jpg">
+    </div>
+    <div style="background: #ffffff; padding: 120px 140px; border-radius: 50px;
+        box-shadow: 0 40px 100px rgba(0,0,0,0.3); text-align: center;
+        max-width: 1100px; width: 100%;">
+      <h2 style="font-size: 108px; margin-bottom: 40px; color: #2d3436; font-weight: 800;">
+        Welcome to Nexsoon
+      </h2>
+      <p style="font-size: 56px; margin-bottom: 60px; color: #636e72;">Enter your control panel password</p>
+      <input id="passInput" inputmode="numeric" type="password"
+             placeholder="Enter Password"
+             style="font-size: 60px; padding: 40px; width: 100%; border-radius: 24px;
+                    border: 2px solid transparent; outline: none; background: #ffffff;
+                    box-shadow: 0 0 0 2px #ccc; margin-bottom: 60px;"/>
+      <br/>
+      <button onclick="checkPassword()" style="font-size: 60px; padding: 30px 100px;
+              background-color: #2ecc71; color: white; border: none; border-radius: 24px;
+              cursor: pointer; box-shadow: 0 12px 24px rgba(0,0,0,0.2);">
+        Enter
+      </button>
+      <p id="errorText" style="font-size: 48px; color: red; margin-top: 40px;"></p>
+    </div>
+  </div>
+  <!-- offline notices -->
+  <div id="user-offline-notice">No internet connection</div>
+  <div id="offline-notice">Device is offline</div>
+  <!-- 🌐 Main Smart Control Panel -->
+  <h1 style="font-size: 55px; margin-top: 40px; margin-bottom: -70px; color: #000000; font-weight: 700; font-family: Arial, sans-serif;">
+    Smart control
+  </h1>
+  <h1 style="font-size: 100px; margin-top: 100px; font-family: 'Verdana', sans-serif; font-weight: 700; color: #2d3436;">
+    Babul Enterprise
+  </h1>
+  <div class="slideshow-container" id="slideshow-main">
+    <div class="skeleton"></div>
+    <img class="slide active" src="https://raw.githubusercontent.com/facebook-f/My-Image/refs/heads/main/20250825_180955.jpg">
+    <img class="slide" src="https://raw.githubusercontent.com/facebook-f/My-Image/refs/heads/main/20250825_181025.jpg">
+    <img class="slide" src="https://raw.githubusercontent.com/facebook-f/My-Image/refs/heads/main/20250825_181154.jpg">
+  </div>
+  <div class="container" style="flex-direction: column; display: flex; align-items: center;">
+    <div class="card" style="width: 100%; max-width: 700px;">
+      <div class="label">Fan</div>
+      <label class="switch">
+        <input onchange="toggleDeviceFirebase('devices/light', this, 'statusLight')" type="checkbox"/>
+        <span class="slider"></span>
+      </label>
+      <div class="status" id="statusLight">OFF</div>
+    </div>
+    <div class="card" style="width: 100%; max-width: 700px; margin-top: 60px;">
+      <div class="label">Light</div>
+      <label class="switch">
+        <input onchange="toggleDeviceFirebase('devices/fan', this, 'statusFan')" type="checkbox"/>
+        <span class="slider"></span>
+      </label>
+      <div class="status" id="statusFan">OFF</div>
+    </div>
+  </div>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBEjUf911-av1oV3dgr9IVXMNG8e25yLW0",
+  authDomain: "monir-smart-control.firebaseapp.com",
+  databaseURL: "https://monir-smart-control-default-rtdb.firebaseio.com",
+  projectId: "monir-smart-control",
+  storageBucket: "monir-smart-control.firebasestorage.app",
+  messagingSenderId: "435268128535",
+  appId: "1:435268128535:web:2a5f665c10295b704e7152",
+  measurementId: "G-496B19VT2C"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// 🟢 Skeletal loading remove when all slideshow images loaded
+function hideSkeletonWhenLoaded(containerId) {
+  const container = document.getElementById(containerId);
+  const skeleton = container.querySelector('.skeleton');
+  const images = container.querySelectorAll('img');
+  let loadedCount = 0;
+  images.forEach(img => {
+    img.addEventListener('load', () => {
+      loadedCount++;
+      if (loadedCount === images.length) {
+        skeleton.style.display = 'none';
+      }
+    });
+  });
+}
+hideSkeletonWhenLoaded('slideshow');
+hideSkeletonWhenLoaded('slideshow-main');
+
+// slideshow
+const slides = document.querySelectorAll('#slideshow .slide');
+let currentIndex = 0;
+function showNextSlide() {
+  slides.forEach((slide, index) => {
+    slide.classList.remove('active','prev');
+    if(index === currentIndex) slide.classList.add('prev');
+  });
+  currentIndex = (currentIndex + 1) % slides.length;
+  slides[currentIndex].classList.add('active');
+}
+setInterval(showNextSlide, 5000);
+
+// main slideshow
+const mainSlides = document.querySelectorAll('#slideshow-main .slide');
+let mainCurrentIndex = 0;
+function showNextMainSlide() {
+  mainSlides.forEach((slide, index) => {
+    slide.classList.remove('active','prev');
+    if(index === mainCurrentIndex) slide.classList.add('prev');
+  });
+  mainCurrentIndex = (mainCurrentIndex + 1) % mainSlides.length;
+  mainSlides[mainCurrentIndex].classList.add('active');
+}
+setInterval(showNextMainSlide, 5000);
+
+// password check
+function checkPassword() {
+  const input = document.getElementById("passInput").value;
+  const errorText = document.getElementById("errorText");
+  db.ref("auth/password").once("value", function(snapshot) {
+    const correctPass = snapshot.val();
+    if (input === correctPass) {
+      document.getElementById("login").remove();
+    } else {
+      errorText.textContent = "Wrong Password!";
+    }
+  });
+}
+document.getElementById("passInput").addEventListener("keydown", function(event) {
+  if (event.key === "Enter") checkPassword();
+});
+
+// toggle devices
+function toggleDeviceFirebase(refPath, element, statusId) {
+  const state = element.checked ? true : false;
+  firebase.database().ref(refPath).set(state);
+  document.getElementById(statusId).textContent = state ? "ON" : "OFF";
+}
+
+// sync Light
+firebase.database().ref("devices/light").on("value", function(snapshot) {
+  const isOn = snapshot.val() === true;
+  const lightSwitch = document.querySelector('input[onchange*="devices/light"]');
+  const lightStatus = document.getElementById("statusLight");
+  lightSwitch.checked = isOn;
+  lightStatus.textContent = isOn ? "ON" : "OFF";
+});
+
+// sync Fan
+firebase.database().ref("devices/fan").on("value", function(snapshot) {
+  const isOn = snapshot.val() === true;
+  const fanSwitch = document.querySelector('input[onchange*="devices/fan"]');
+  const fanStatus = document.getElementById("statusFan");
+  fanSwitch.checked = isOn;
+  fanStatus.textContent = isOn ? "ON" : "OFF";
+});
+
+// device status check
+function checkLastSeenStatus() {
+  const lastSeenRef = firebase.database().ref("lastSeen");
+  const statusRef = firebase.database().ref("status");
+  lastSeenRef.once("value").then(snapshot => {
+    const lastSeenTime = snapshot.val();
+    const now = Date.now();
+    const diff = now - lastSeenTime;
+    const notice = document.getElementById("offline-notice");
+    const loginPanel = document.getElementById("login");
+    const isOffline = diff > 6000;
+
+    if (isOffline) {
+      statusRef.set("offline");
+      if (notice) notice.style.display = "block";
+      document.body.style.backgroundColor = "#ffe6e6";
+      if (loginPanel) loginPanel.style.backgroundColor = "#ffe6e6";
+    } else {
+      statusRef.set("online");
+      if (notice) notice.style.display = "none";
+      document.body.style.backgroundColor = "#f0f2f5";
+      if (loginPanel) loginPanel.style.backgroundColor = "#ffffff";
+    }
+  });
+}
+setInterval(checkLastSeenStatus, 5000);
+document.addEventListener("DOMContentLoaded", checkLastSeenStatus);
+
+// user internet check
+window.addEventListener("offline", () => {
+  document.getElementById("user-offline-notice").style.display = "block";
+});
+window.addEventListener("online", () => {
+  document.getElementById("user-offline-notice").style.display = "none";
+});
+</script>
+</body>
+</html>
