@@ -137,16 +137,16 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 </head>
 <body>
-  <!-- 🔐 Login Page -->
+  <!-- Login Page -->
   <div id="login" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: #ffffff; z-index: 9999;
       display: flex; align-items: center; justify-content: center; padding: 40px;
       flex-direction: column; transition: background-color 0.4s ease;">
     <div class="slideshow-container" id="slideshow">
       <div class="skeleton"></div>
-      <img class="slide active" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986618/photo_6066593348455173250_y_uoiakj.jpg">
-      <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986161/photo_6066593348455173196_y_fyn6wv.jpg">
-      <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986159/photo_6066593348455173195_y_cvz74e.jpg">
+      <img class="slide active" src="https://res.cloudinoupload.com/djjhol6dg/image/upload/v1761986618/photo_6066593348455173250_y_uoiakj.jpg">
+      <img class="slide" src="https://res.cloudinoupload.com/djjhol6dg/image/upload/v1761986161/photo_6066593348455173196_y_fyn6wv.jpg">
+      <img class="slide" src="https://res.cloudinoupload.com/djjhol6dg/image/upload/v1761986159/photo_6066593348455173195_y_cvz74e.jpg">
     </div>
     <div style="background: #ffffff; padding: 120px 140px; border-radius: 50px;
         box-shadow: 0 40px 100px rgba(0,0,0,0.3); text-align: center;
@@ -154,8 +154,8 @@
       <h2 style="font-size: 108px; margin-bottom: 40px; color: #2d3436; font-weight: 800;">
         Welcome to Sensotik
       </h2>
-      <p style="font-size: 56px; margin-bottom: 60px; color: #636e72;">Enter your Smart control password</p>
-      <p id="errorText" style="font-size: 48px; color: red; margin-top: 40px;"></p>
+      <p style="font-size: 56px; margin-bottom: 30px; color: #636e72;">Enter your Smart control panel password</p>
+      <p id="errorText" style="font-size: 48px; color: red; margin-bottom: 10px; min-height: 58px;"></p>
       <input id="passInput" inputmode="numeric" type="password"
              placeholder="Enter Password"
              style="font-size: 60px; padding: 40px; width: 100%; border-radius: 24px;
@@ -172,7 +172,7 @@
   <!-- offline notices -->
   <div id="user-offline-notice">No internet connection</div>
   <div id="offline-notice">Device is offline</div>
-  <!-- 🌐 Main Smart Control Panel -->
+  <!-- Main Smart Control Panel -->
   <h1 style="font-size: 55px; margin-top: 40px; margin-bottom: -70px; color: #000000; font-weight: 700; font-family: Arial, sans-serif;">
     Sensotik 
   </h1>
@@ -181,9 +181,9 @@
   </h1>
   <div class="slideshow-container" id="slideshow-main">
     <div class="skeleton"></div>
-    <img class="slide active" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986618/photo_6066593348455173250_y_uoiakj.jpg">
-    <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986161/photo_6066593348455173196_y_fyn6wv.jpg">
-    <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986159/photo_6066593348455173195_y_cvz74e.jpg">
+    <img class="slide active" src="https://res.cloudinoupload.com/djjhol6dg/image/upload/v1761986618/photo_6066593348455173250_y_uoiakj.jpg">
+    <img class="slide" src="https://res.cloudinoupload.com/djjhol6dg/image/upload/v1761986161/photo_6066593348455173196_y_fyn6wv.jpg">
+    <img class="slide" src="https://res.cloudinoupload.com/djjhol6dg/image/upload/v1761986159/photo_6066593348455173195_y_cvz74e.jpg">
   </div>
   <div class="container" style="flex-direction: column; display: flex; align-items: center;">
     <div class="card" style="width: 100%; max-width: 700px;">
@@ -217,7 +217,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 🟢 Skeletal loading remove when all slideshow images loaded
+// Skeletal loading remove when all slideshow images loaded
 function hideSkeletonWhenLoaded(containerId) {
   const container = document.getElementById(containerId);
   const skeleton = container.querySelector('.skeleton');
