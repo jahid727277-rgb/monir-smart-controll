@@ -1,0 +1,232 @@
+#include <ESP8266WiFi.h>
+#include <WiFiManager.h>
+#include <FirebaseESP8266.h>
+#include <time.h>
+
+// --- Firebase Configuration ---
+#define FIREBASE_HOST "https://monir-smart-control-default-rtdb.firebaseio.com"
+#define FIREBASE_SECRET "gTiMlZxe9Sv5H1Yo6pz85ZJQNIchwWIqjThzDAX2"
+
+// --- Pin Configuration ---
+#define LIGHT_PIN D1
+#define FAN_PIN D2
+#define ALARM_PIN D3 
+
+FirebaseData fbdo;
+FirebaseConfig config;
+FirebaseAuth auth;
+
+// --- Device States ---
+bool lightState = false;
+bool fanState = false;
+bool alarmState = false;
+
+unsigned long lastUpdateTime = 0;
+const unsigned long updateInterval = 30000; // 30 seconds for lastSeen
+bool initialStatesSet = false;
+
+// --- Alarm timing ---
+unsigned long lastAlarmCheck = 0;
+const unsigned long alarmCheckInterval = 60000; // check every 60 sec
+unsigned long alarmStartTime = 0;
+const unsigned long alarmDuration = 4000; // alarm will buzz max 4 sec
+
+// ----------------------------------------------------------------
+// Convert "06:00 AM" → 24-hour time 
+// ----------------------------------------------------------------
+void parseTime(String t, int &hr, int &mn) {
+  t.trim();
+  int spaceIndex = t.indexOf(' ');
+  if (spaceIndex == -1) return;
+
+  String timePart = t.substring(0, spaceIndex);
+  String ampm = t.substring(spaceIndex + 1);
+
+  int colonIndex = timePart.indexOf(':');
+  if (colonIndex == -1) return;
+
+  hr = timePart.substring(0, colonIndex).toInt();
+  mn = timePart.substring(colonIndex + 1).toInt();
+
+  if (ampm.equalsIgnoreCase("PM") && hr != 12) hr += 12;
+  else if (ampm.equalsIgnoreCase("AM") && hr == 12) hr = 0;
+}
+
+// ----------------------------------------------------------------
+// Setup
+// ----------------------------------------------------------------
+void setup() {
+  Serial.begin(115200);
+  Serial.println("\n-----------------------------------------");
+  Serial.println("Starting Smart Control System...");
+  Serial.println("-----------------------------------------");
+
+  pinMode(LIGHT_PIN, OUTPUT);
+  pinMode(FAN_PIN, OUTPUT);
+  pinMode(ALARM_PIN, OUTPUT);
+  digitalWrite(LIGHT_PIN, LOW);
+  digitalWrite(FAN_PIN, LOW);
+  digitalWrite(ALARM_PIN, LOW);
+
+  // WiFiManager
+  WiFi.mode(WIFI_STA);
+  Serial.println("Attempting to connect to WiFi...");
+  WiFiManager wm;
+  wm.setConfigPortalTimeout(180); 
+  if (!wm.autoConnect("Smart Control Setup")) {
+    Serial.println("WiFi connection failed. Restarting...");
+    ESP.restart();
+  }
+  Serial.println("WiFi Connected Successfully! 🎉");
+  Serial.print("Local IP: "); Serial.println(WiFi.localIP());
+
+  // Firebase Initialization
+  config.database_url = FIREBASE_HOST;
+  config.signer.tokens.legacy_token = FIREBASE_SECRET; 
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+  Serial.println("Firebase initialized.");
+
+  // NTP Time
+  configTime(6 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+  Serial.println("Waiting for NTP sync...");
+  time_t now = time(nullptr);
+  while (now < 10000) { 
+    delay(500);
+    Serial.print(".");
+    now = time(nullptr);
+  }
+  Serial.println("\nTime Synced.");
+}
+
+// ----------------------------------------------------------------
+// Loop
+// ----------------------------------------------------------------
+void loop() {
+  if (Firebase.ready()) {
+    // --- Initial States ---
+    if (!initialStatesSet) {
+      Serial.println("--- Initial Firebase State Check ---");
+      if (Firebase.setBool(fbdo, "/devices/light", lightState) &&
+          Firebase.setBool(fbdo, "/devices/fan", fanState) &&
+          Firebase.setString(fbdo, "/status", "online")) {
+        Serial.println("Initial states set.");
+        initialStatesSet = true;
+      } else {
+        Serial.print("ERROR: "); Serial.println(fbdo.errorReason());
+      }
+    }
+
+    // --- lastSeen Update ---
+    if (millis() - lastUpdateTime >= updateInterval) {
+      lastUpdateTime = millis();
+      if (Firebase.setTimestamp(fbdo, "/lastSeen")) {
+        Serial.println("lastSeen updated.");
+      } else {
+        Serial.print("ERROR: lastSeen update failed: "); Serial.println(fbdo.errorReason());
+      }
+    }
+
+    // --- Light Control ---
+    if (Firebase.getBool(fbdo, "/devices/light")) {
+      bool fbLight = fbdo.boolData();
+      if (fbLight != lightState) {
+        lightState = fbLight;
+        digitalWrite(LIGHT_PIN, lightState ? HIGH : LOW);
+        Serial.print("Light state changed: "); Serial.println(lightState ? "ON" : "OFF");
+      }
+    }
+
+    // --- Fan Control ---
+    if (Firebase.getBool(fbdo, "/devices/fan")) {
+      bool fbFan = fbdo.boolData();
+      if (fbFan != fanState) {
+        fanState = fbFan;
+        digitalWrite(FAN_PIN, fanState ? HIGH : LOW);
+        Serial.print("Fan state changed: "); Serial.println(fanState ? "ON" : "OFF");
+      }
+    }
+
+    // --- Alarm Control (Check once per minute) ---
+    if (millis() - lastAlarmCheck >= alarmCheckInterval) {
+      lastAlarmCheck = millis();
+      bool shouldAlarmBeOn = false;
+
+      time_t now = time(nullptr);
+      struct tm *t = localtime(&now);
+      int curHr = t->tm_hour; 
+      int curMn = t->tm_min;
+      int today = t->tm_wday; 
+
+      Serial.print("Checking alarms at "); 
+      Serial.print(curHr); Serial.print(":"); Serial.println(curMn);
+
+      if (Firebase.getJSON(fbdo, "/alarms")) {
+        FirebaseJson alarms = fbdo.jsonObject();
+        size_t count = alarms.iteratorBegin();
+        for (size_t i = 0; i < count; i++) {
+          int type;
+          String key, rawJson;
+          alarms.iteratorGet(i, type, key, rawJson); 
+
+          FirebaseJson alarmObj; 
+          alarmObj.setJsonData(rawJson);
+          FirebaseJsonData d;
+
+          alarmObj.get(d, "active");
+          bool isActive = d.to<bool>();
+          if (!isActive) continue;
+
+          alarmObj.get(d, "time");
+          String timeStr = d.to<String>(); 
+          int ah, am;
+          parseTime(timeStr, ah, am);
+
+          alarmObj.get(d, "days");
+          String arrStr = d.to<String>(); 
+          FirebaseJsonArray arr;
+          arr.setJsonArrayData(arrStr);
+
+          bool todayMatch = false;
+          for (int n = 0; n < arr.size(); n++) {
+            FirebaseJsonData x;
+            arr.get(x, n);
+            if (x.to<int>() == today) {
+              todayMatch = true;
+              break;
+            }
+          }
+          if (!todayMatch) continue;
+
+          if (ah == curHr && am == curMn) {
+            shouldAlarmBeOn = true;
+            alarmStartTime = millis(); // Start 3 sec buzz
+            Serial.println("ALARM TIME MATCHED! 🔔");
+            break;
+          }
+        }
+        alarms.iteratorEnd();
+      }
+
+      if (shouldAlarmBeOn) {
+        digitalWrite(ALARM_PIN, HIGH);
+        alarmState = true;
+      }
+    }
+
+    // --- Turn off alarm after 3 sec ---
+    if (alarmState && millis() - alarmStartTime >= alarmDuration) {
+      digitalWrite(ALARM_PIN, LOW);
+      alarmState = false;
+      Serial.println("ALARM OFF after 3 seconds.");
+    }
+
+  } else {
+    if (millis() - lastUpdateTime > 10000) {
+      Serial.print("Firebase not ready: "); Serial.println(fbdo.errorReason());
+      lastUpdateTime = millis();
+    }
+  }
+
+  yield();
+}
