@@ -141,54 +141,51 @@
       cursor: pointer;
       transition: transform 0.3s ease;
     }
-    .smart-icon:hover {
-      transform: scale(1.2);
-    }
+    .smart-icon:hover { transform: scale(1.2); }
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 </head>
 <body>
+<!-- offline notices -->
+<div id="user-offline-notice">No internet connection</div>
+<div id="offline-notice">Device is offline</div>
 
-  <!-- offline notices -->
-  <div id="user-offline-notice">No internet connection</div>
-  <div id="offline-notice">Device is offline</div>
+<!-- Main Smart Control Panel -->
+<h1 style="font-size: 55px; margin-top: 40px; margin-bottom: -70px; color: #000000; font-weight: 700; font-family: Arial, sans-serif;">
+  Sensotik
+</h1>
 
-  <!-- Main Smart Control Panel -->
-  <h1 style="font-size: 55px; margin-top: 40px; margin-bottom: -70px; color: #000000; font-weight: 700; font-family: Arial, sans-serif;">
-    Sensotik 
-  </h1>
+<h1 style="font-size: 100px; margin-top: 100px; font-family: 'Verdana', sans-serif; font-weight: 700; color: #2d3436;">
+  Smart control
+  <a href="https://keen-strudel-3d9011.netlify.app/" class="smart-icon">⏰</a>
+</h1>
 
-  <h1 style="font-size: 100px; margin-top: 100px; font-family: 'Verdana', sans-serif; font-weight: 700; color: #2d3436;">
-   Smart control
-   <a href="https://keen-strudel-3d9011.netlify.app/" class="smart-icon">⏰</a>
-  </h1>
+<div class="slideshow-container" id="slideshow-main">
+  <div class="skeleton"></div>
+  <img class="slide active" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986618/photo_6066593348455173250_y_uoiakj.jpg">
+  <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986161/photo_6066593348455173196_y_fyn6wv.jpg">
+  <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986159/photo_6066593348455173195_y_cvz74e.jpg">
+</div>
 
-  <div class="slideshow-container" id="slideshow-main">
-    <div class="skeleton"></div>
-    <img class="slide active" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986618/photo_6066593348455173250_y_uoiakj.jpg">
-    <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986161/photo_6066593348455173196_y_fyn6wv.jpg">
-    <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986159/photo_6066593348455173195_y_cvz74e.jpg">
+<div class="container" style="flex-direction: column; display: flex; align-items: center;">
+  <div class="card" style="width: 100%; max-width: 700px;">
+    <div class="label">Light</div>
+    <label class="switch">
+      <input onchange="toggleDeviceFirebase('devices/light', this, 'statusLight')" type="checkbox"/>
+      <span class="slider"></span>
+    </label>
+    <div class="status" id="statusLight">OFF</div>
   </div>
-
-  <div class="container" style="flex-direction: column; display: flex; align-items: center;">
-    <div class="card" style="width: 100%; max-width: 700px;">
-      <div class="label">Light</div>
-      <label class="switch">
-        <input onchange="toggleDeviceFirebase('devices/light', this, 'statusLight')" type="checkbox"/>
-        <span class="slider"></span>
-      </label>
-      <div class="status" id="statusLight">OFF</div>
-    </div>
-    <div class="card" style="width: 100%; max-width: 700px; margin-top: 60px;">
-      <div class="label">Fan</div>
-      <label class="switch">
-        <input onchange="toggleDeviceFirebase('devices/fan', this, 'statusFan')" type="checkbox"/>
-        <span class="slider"></span>
-      </label>
-      <div class="status" id="statusFan">OFF</div>
-    </div>
+  <div class="card" style="width: 100%; max-width: 700px; margin-top: 60px;">
+    <div class="label">Fan</div>
+    <label class="switch">
+      <input onchange="toggleDeviceFirebase('devices/fan', this, 'statusFan')" type="checkbox"/>
+      <span class="slider"></span>
+    </label>
+    <div class="status" id="statusFan">OFF</div>
   </div>
+</div>
 
 <script>
 const firebaseConfig = {
@@ -261,7 +258,7 @@ firebase.database().ref("devices/fan").on("value", function(snapshot) {
   fanStatus.style.color = isOn ? "#27ae60" : "#b2bec3";
 });
 
-// Device online/offline check
+// Device online/offline check (35 seconds interval)
 function checkLastSeenStatus() {
   const lastSeenRef = firebase.database().ref("lastSeen");
   const statusRef = firebase.database().ref("status");
@@ -270,7 +267,7 @@ function checkLastSeenStatus() {
     const now = Date.now();
     const diff = now - lastSeenTime;
     const notice = document.getElementById("offline-notice");
-    const isOffline = diff > 6000;
+    const isOffline = diff > 35000; // 35 seconds
 
     if (isOffline) {
       statusRef.set("offline");
@@ -283,7 +280,7 @@ function checkLastSeenStatus() {
     }
   });
 }
-setInterval(checkLastSeenStatus, 5000);
+setInterval(checkLastSeenStatus, 35000);
 document.addEventListener("DOMContentLoaded", checkLastSeenStatus);
 
 // User internet status
