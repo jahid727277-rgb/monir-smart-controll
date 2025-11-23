@@ -80,9 +80,7 @@
       transition: color 0.3s ease;
     }
     input:checked ~ .status { color: var(--primary); }
-    @media (max-width: 768px) {
-      .container { grid-template-columns: 1fr; }
-    }
+
     /* slideshow */
     .slideshow-container {
       width: 100%;
@@ -104,11 +102,12 @@
       opacity: 0;
       transition: all 1s ease;
       object-fit: cover;
+      cursor: pointer;
     }
     .slide.active { left: 0; opacity: 1; }
     .slide.prev { left: -100%; opacity: 0; }
 
-    /* Skeletal loading */
+    /* skeleton */
     .skeleton {
       position: absolute;
       top: 0; left: 0;
@@ -130,10 +129,9 @@
       text-align: center; padding: 20px; font-size: 36px;
       font-weight: bold; z-index: 10000; display: none;
     }
-    #user-offline-notice { background: #ffcccc; color: #c0392b; z-index:10001; }
+    #user-offline-notice { background: #ffcccc; color: #c0392b; }
     #offline-notice { background: #ffb3b3; color: #c0392b; }
 
-    /* Icon next to Smart control */
     .smart-icon {
       font-size: 60px;
       vertical-align: middle;
@@ -143,10 +141,13 @@
     }
     .smart-icon:hover { transform: scale(1.2); }
 </style>
+
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 </head>
+
 <body>
+
 <div id="user-offline-notice">No internet connection</div>
 <div id="offline-notice">Device is offline</div>
 
@@ -159,11 +160,21 @@
   <a href="https://keen-strudel-3d9011.netlify.app/" class="smart-icon">⏰</a>
 </h1>
 
+<!-- CLICKABLE SLIDES -->
 <div class="slideshow-container" id="slideshow-main">
   <div class="skeleton"></div>
-  <img class="slide active" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986618/photo_6066593348455173250_y_uoiakj.jpg">
-  <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986161/photo_6066593348455173196_y_fyn6wv.jpg">
-  <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986159/photo_6066593348455173195_y_cvz74e.jpg">
+
+  <a href="https://uitara.fun/" target="_blank">
+    <img class="slide active" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986618/photo_6066593348455173250_y_uoiakj.jpg">
+  </a>
+
+  <a href="https://uitara.fun/" target="_blank">
+    <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986161/photo_6066593348455173196_y_fyn6wv.jpg">
+  </a>
+
+  <a href="https://uitara.fun/" target="_blank">
+    <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1761986159/photo_6066593348455173195_y_cvz74e.jpg">
+  </a>
 </div>
 
 <div class="container" style="flex-direction: column; display: flex; align-items: center;">
@@ -175,6 +186,7 @@
     </label>
     <div class="status" id="statusLight">OFF</div>
   </div>
+
   <div class="card" style="width: 100%; max-width: 700px; margin-top: 60px;">
     <div class="label">Fan</div>
     <label class="switch">
@@ -199,7 +211,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Skeletal loading hide when images loaded
+// Skeleton hide
 function hideSkeletonWhenLoaded(containerId) {
   const container = document.getElementById(containerId);
   const skeleton = container.querySelector('.skeleton');
@@ -216,7 +228,7 @@ function hideSkeletonWhenLoaded(containerId) {
 }
 hideSkeletonWhenLoaded('slideshow-main');
 
-// Main slideshow
+// Slides
 const mainSlides = document.querySelectorAll('#slideshow-main .slide');
 let mainCurrentIndex = 0;
 function showNextMainSlide() {
@@ -229,14 +241,14 @@ function showNextMainSlide() {
 }
 setInterval(showNextMainSlide, 5000);
 
-// Toggle devices
+// Device toggle
 function toggleDeviceFirebase(refPath, element, statusId) {
   const state = element.checked ? true : false;
   firebase.database().ref(refPath).set(state);
   document.getElementById(statusId).textContent = state ? "ON" : "OFF";
 }
 
-// Sync Light
+// Light Sync
 firebase.database().ref("devices/light").on("value", function(snapshot) {
   const isOn = snapshot.val() === true;
   const lightSwitch = document.querySelector('input[onchange*="devices/light"]');
@@ -246,7 +258,7 @@ firebase.database().ref("devices/light").on("value", function(snapshot) {
   lightStatus.style.color = isOn ? "#27ae60" : "#b2bec3";
 });
 
-// Sync Fan
+// Fan Sync
 firebase.database().ref("devices/fan").on("value", function(snapshot) {
   const isOn = snapshot.val() === true;
   const fanSwitch = document.querySelector('input[onchange*="devices/fan"]');
@@ -256,32 +268,33 @@ firebase.database().ref("devices/fan").on("value", function(snapshot) {
   fanStatus.style.color = isOn ? "#27ae60" : "#b2bec3";
 });
 
-// Device online/offline check (35 seconds interval)
+// Device Online/Offline Check
 function checkLastSeenStatus() {
   const lastSeenRef = firebase.database().ref("lastSeen");
   const statusRef = firebase.database().ref("status");
+
   lastSeenRef.once("value").then(snapshot => {
     const lastSeenTime = snapshot.val();
     const now = Date.now();
     const diff = now - lastSeenTime;
+
     const notice = document.getElementById("offline-notice");
-    const isOffline = diff > 35000; // 35 seconds
+    const isOffline = diff > 35000;
 
     if (isOffline) {
       statusRef.set("offline");
-      if (notice) notice.style.display = "block";
+      notice.style.display = "block";
       document.body.style.backgroundColor = "#ffe6e6";
     } else {
       statusRef.set("online");
-      if (notice) notice.style.display = "none";
+      notice.style.display = "none";
       document.body.style.backgroundColor = "#f0f2f5";
     }
   });
 }
-// প্রথম চেকটি এখন ৩৫ সেকেন্ড পর শুরু হবে এবং প্রতি ৩৫ সেকেন্ড অন্তর চলতে থাকবে।
-setInterval(checkLastSeenStatus, 35000); 
+setInterval(checkLastSeenStatus, 35000);
 
-// User internet status
+// User Internet
 window.addEventListener("offline", () => {
   document.getElementById("user-offline-notice").style.display = "block";
 });
@@ -289,5 +302,6 @@ window.addEventListener("online", () => {
   document.getElementById("user-offline-notice").style.display = "none";
 });
 </script>
+
 </body>
 </html>
