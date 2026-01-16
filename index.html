@@ -1,4 +1,5 @@
-<!DOCTYPE html>  <html lang="en">  
+<!DOCTYPE html>  
+<html lang="en">  
 <head>  
 <meta charset="utf-8"/>  
 <title>Sensotik</title>  
@@ -105,40 +106,41 @@
       object-fit: cover;  
     }  
     .slide.active { left: 0; opacity: 1; }  
-    .slide.prev { left: -100%; opacity: 0; }  /* Skeletal loading */  
-.skeleton {  
-  position: absolute;  
-  top: 0; left: 0;  
-  width: 100%;  
-  height: 100%;  
-  border-radius: 20px;  
-  background: linear-gradient(90deg, #e0e0e0 25%, #f8f8f8 50%, #e0e0e0 75%);  
-  background-size: 200% 100%;  
-  animation: loading 1.5s infinite;  
-}  
-@keyframes loading {  
-  0% { background-position: 200% 0; }  
-  100% { background-position: -200% 0; }  
-}  
+    .slide.prev { left: -100%; opacity: 0; }  
+    /* Skeletal loading */  
+    .skeleton {  
+      position: absolute;  
+      top: 0; left: 0;  
+      width: 100%;  
+      height: 100%;  
+      border-radius: 20px;  
+      background: linear-gradient(90deg, #e0e0e0 25%, #f8f8f8 50%, #e0e0e0 75%);  
+      background-size: 200% 100%;  
+      animation: loading 1.5s infinite;  
+    }  
+    @keyframes loading {  
+      0% { background-position: 200% 0; }  
+      100% { background-position: -200% 0; }  
+    }  
 
-/* offline notices */  
-#user-offline-notice, #offline-notice {  
-  position: fixed; top: 0; left: 0; width: 100%;  
-  text-align: center; padding: 20px; font-size: 36px;  
-  font-weight: bold; z-index: 10000; display: none;  
-}  
-#user-offline-notice { background: #ffcccc; color: #c0392b; z-index:10001; }  
-#offline-notice { background: #ffb3b3; color: #c0392b; }  
+    /* offline notices */  
+    #user-offline-notice, #offline-notice {  
+      position: fixed; top: 0; left: 0; width: 100%;  
+      text-align: center; padding: 20px; font-size: 36px;  
+      font-weight: bold; z-index: 10000; display: none;  
+    }  
+    #user-offline-notice { background: #ffcccc; color: #c0392b; z-index:10001; }  
+    #offline-notice { background: #ffb3b3; color: #c0392b; }  
 
-/* Icon next to Smart control */  
-.smart-icon {  
-  font-size: 60px;  
-  vertical-align: middle;  
-  margin-left: 20px;  
-  cursor: pointer;  
-  transition: transform 0.3s ease;  
-}  
-.smart-icon:hover { transform: scale(1.2); }
+    /* Icon next to Smart control */  
+    .smart-icon {  
+      font-size: 60px;  
+      vertical-align: middle;  
+      margin-left: 20px;  
+      cursor: pointer;  
+      transition: transform 0.3s ease;  
+    }  
+    .smart-icon:hover { transform: scale(1.2); }
 
 </style>  
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>  
@@ -146,17 +148,25 @@
 </head>  
 <body>  
 <div id="user-offline-notice">No internet connection</div>  
-<div id="offline-notice">Device is offline</div>  <h1 style="font-size: 55px; margin-top: 40px; margin-bottom: -70px; color: #000000; font-weight: 700; font-family: Arial, sans-serif;">  
+<div id="offline-notice">Device is offline</div>  
+
+<h1 style="font-size: 55px; margin-top: 40px; margin-bottom: -70px; color: #000000; font-weight: 700; font-family: Arial, sans-serif;">  
   Sensotik  
-</h1>  <h1 style="font-size: 100px; margin-top: 100px; font-family: 'Verdana', sans-serif; font-weight: 700; color: #2d3436;">  
+</h1>  
+
+<h1 style="font-size: 100px; margin-top: 100px; font-family: 'Verdana', sans-serif; font-weight: 700; color: #2d3436;">  
   Smart control  
   <a href="https://keen-strudel-3d9011.netlify.app/" class="smart-icon">⏰</a>  
-</h1>  <div class="slideshow-container" id="slideshow-main">  
+</h1>  
+
+<div class="slideshow-container" id="slideshow-main">  
   <div class="skeleton"></div>  
-  <img class="slide active" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1764503733/sbt6pkdaxququcmelsnp.jpg">  
+  <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1764503733/sbt6pkdaxququcmelsnp.jpg">  
   <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1764505663/j5gjy4nnm5bvx3e9a9ad.png">  
   <img class="slide" src="https://res.cloudinary.com/djjhol6dg/image/upload/v1764505791/h7clbzskwzqtcxen9k3j.png">  
-</div>  <div class="container" style="flex-direction: column; display: flex; align-items: center;">  
+</div>  
+
+<div class="container" style="flex-direction: column; display: flex; align-items: center;">  
   <div class="card" style="width: 100%; max-width: 700px;">  
     <div class="label">Light 1</div>  
     <label class="switch">  
@@ -173,7 +183,9 @@
     </label>  
     <div class="status" id="statusFan">OFF</div>  
   </div>  
-</div>  <script>  
+</div>  
+
+<script>  
 const firebaseConfig = {  
   apiKey: "AIzaSyBEjUf911-av1oV3dgr9IVXMNG8e25yLW0",  
   authDomain: "monir-smart-control.firebaseapp.com",  
@@ -187,26 +199,45 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);  
 const db = firebase.database();  
   
-// Skeletal loading hide when images loaded  
-function hideSkeletonWhenLoaded(containerId) {  
-  const container = document.getElementById(containerId);  
-  const skeleton = container.querySelector('.skeleton');  
-  const images = container.querySelectorAll('img');  
-  let loadedCount = 0;  
-  images.forEach(img => {  
-    img.addEventListener('load', () => {  
-      loadedCount++;  
-      if (loadedCount === images.length) {  
-        skeleton.style.display = 'none';  
-      }  
-    });  
-  });  
-}  
-hideSkeletonWhenLoaded('slideshow-main');  
+// Preload all images and start slideshow only after all loaded
+let slideshowStarted = false;
+const mainSlides = document.querySelectorAll('#slideshow-main .slide');
+let mainCurrentIndex = 0;
+
+function preloadImagesAndStartSlideshow() {
+  const container = document.getElementById('slideshow-main');
+  const skeleton = container.querySelector('.skeleton');
+  const images = Array.from(mainSlides);
+  let loadedCount = 0;
   
-// Main slideshow  
-const mainSlides = document.querySelectorAll('#slideshow-main .slide');  
-let mainCurrentIndex = 0;  
+  images.forEach(img => {
+    if (img.complete) {
+      loadedCount++;
+      checkAllLoaded();
+    } else {
+      img.addEventListener('load', () => {
+        loadedCount++;
+        checkAllLoaded();
+      });
+      img.addEventListener('error', () => {
+        loadedCount++;
+        checkAllLoaded();
+      });
+    }
+  });
+  
+  function checkAllLoaded() {
+    if (loadedCount === images.length && !slideshowStarted) {
+      slideshowStarted = true;
+      skeleton.style.display = 'none';
+      mainSlides[0].classList.add('active');
+      setInterval(showNextMainSlide, 5000);
+    }
+  }
+}
+
+preloadImagesAndStartSlideshow();
+
 function showNextMainSlide() {  
   mainSlides.forEach((slide, index) => {  
     slide.classList.remove('active','prev');  
@@ -215,7 +246,6 @@ function showNextMainSlide() {
   mainCurrentIndex = (mainCurrentIndex + 1) % mainSlides.length;  
   mainSlides[mainCurrentIndex].classList.add('active');  
 }  
-setInterval(showNextMainSlide, 5000);  
   
 // Toggle devices  
 function toggleDeviceFirebase(refPath, element, statusId) {  
@@ -253,7 +283,7 @@ function checkLastSeenStatus() {
     const now = Date.now();  
     const diff = now - lastSeenTime;  
     const notice = document.getElementById("offline-notice");  
-    const isOffline = diff > 35000; // 35 seconds  
+    const isOffline = diff > 35000;
   
     if (isOffline) {  
       statusRef.set("offline");  
@@ -266,7 +296,6 @@ function checkLastSeenStatus() {
     }  
   });  
 }  
-// প্রথম চেকটি এখন ৩৫ সেকেন্ড পর শুরু হবে এবং প্রতি ৩৫ সেকেন্ড অন্তর চলতে থাকবে।  
 setInterval(checkLastSeenStatus, 35000);   
   
 // User internet status  
@@ -276,5 +305,6 @@ window.addEventListener("offline", () => {
 window.addEventListener("online", () => {  
   document.getElementById("user-offline-notice").style.display = "none";  
 });  
-</script>  </body>  
-</html> 
+</script>  
+</body>  
+</html>
