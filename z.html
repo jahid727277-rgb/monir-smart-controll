@@ -2,47 +2,50 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>ESP8266 Control Panel</title>
+<title>ESP8266 Smart Control</title>
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 <style>
 body{
   margin:0;
   height:100vh;
-  font-family:Arial;
   display:flex;
   justify-content:center;
   align-items:center;
+  font-family:Arial, Helvetica, sans-serif;
   background:#555;
   color:white;
-  transition:0.4s;
+  transition:.3s;
 }
 
 .panel{
-  background:rgba(0,0,0,0.35);
-  padding:30px 40px;
-  border-radius:16px;
-  width:300px;
+  background:rgba(0,0,0,.4);
+  padding:28px;
+  border-radius:20px;
+  width:90%;
+  max-width:360px;
+  box-shadow:0 10px 25px rgba(0,0,0,.4);
+}
+
+h3{
   text-align:center;
+  margin-bottom:25px;
+  font-size:22px;
 }
 
-.status{
-  margin-bottom:20px;
-  font-size:20px;
-}
-
-/* Toggle */
 .device{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  margin:15px 0;
+  margin:22px 0;
+  font-size:20px;
 }
 
+/* ===== BIG TOGGLE ===== */
 .switch{
   position:relative;
-  width:60px;
-  height:32px;
+  width:90px;
+  height:48px;
 }
 
 .switch input{
@@ -53,32 +56,33 @@ body{
   position:absolute;
   inset:0;
   background:#999;
-  border-radius:32px;
+  border-radius:50px;
   transition:.3s;
 }
 
-.slider::before{
+.slider:before{
   content:"";
   position:absolute;
-  width:24px;
-  height:24px;
-  left:4px;
-  top:4px;
+  width:38px;
+  height:38px;
+  left:5px;
+  top:5px;
   background:white;
   border-radius:50%;
   transition:.3s;
+  box-shadow:0 2px 6px rgba(0,0,0,.4);
 }
 
 input:checked + .slider{
   background:#00e676;
 }
 
-input:checked + .slider::before{
-  transform:translateX(28px);
+input:checked + .slider:before{
+  transform:translateX(42px);
 }
 
 input:disabled + .slider{
-  background:#555;
+  opacity:.5;
 }
 </style>
 </head>
@@ -86,10 +90,10 @@ input:disabled + .slider{
 <body>
 
 <div class="panel">
-  <div class="status" id="status">Checking ESP...</div>
+  <h3 id="status">Checking ESP...</h3>
 
   <div class="device">
-    <span>D1 Light</span>
+    <span>💡 D1 Light</span>
     <label class="switch">
       <input type="checkbox" id="d1" disabled>
       <span class="slider"></span>
@@ -97,7 +101,7 @@ input:disabled + .slider{
   </div>
 
   <div class="device">
-    <span>D2 Light</span>
+    <span>💡 D2 Light</span>
     <label class="switch">
       <input type="checkbox" id="d2" disabled>
       <span class="slider"></span>
@@ -111,7 +115,7 @@ const client = mqtt.connect(
   {
     username:"senso",
     password:"b!sXjDd9LrE8D.r",
-    clientId:"web_" + Math.random().toString(16).substr(2)
+    clientId:"web_" + Math.random().toString(16).slice(2)
   }
 );
 
@@ -121,41 +125,41 @@ const statusTxt = document.getElementById("status");
 
 let online = false;
 
-client.on("connect", () => {
+client.on("connect",()=>{
   client.subscribe("device/esp8266_01/pong");
+  client.publish("device/esp8266_01/ping","status");
 
-  document.body.style.background = "#ff9800";
-  statusTxt.innerText = "Checking ESP...";
-
-  client.publish("device/esp8266_01/ping", "ping");
-
-  setTimeout(() => {
-    if (!online) {
-      document.body.style.background = "#c62828";
-      statusTxt.innerText = "ESP OFFLINE";
+  setTimeout(()=>{
+    if(!online){
+      document.body.style.background="#c62828";
+      statusTxt.innerText="ESP OFFLINE";
     }
-  }, 2000);
+  },2000);
 });
 
-client.on("message", (topic) => {
-  if (topic === "device/esp8266_01/pong") {
+client.on("message",(topic,msg)=>{
+  if(topic==="device/esp8266_01/pong"){
+    const data = JSON.parse(msg.toString());
+
     online = true;
-    document.body.style.background = "#2e7d32";
-    statusTxt.innerText = "ESP ONLINE";
+    document.body.style.background="#2e7d32";
+    statusTxt.innerText="ESP ONLINE";
+
+    d1.checked = data.d1 === 1;
+    d2.checked = data.d2 === 1;
+
     d1.disabled = false;
     d2.disabled = false;
   }
 });
 
-d1.addEventListener("change", () => {
-  if (!online) return;
-  client.publish("device/esp8266_01/light/d1", d1.checked ? "ON" : "OFF");
-});
+d1.onchange = ()=>{
+  if(online) client.publish("device/esp8266_01/light/d1", d1.checked?"ON":"OFF");
+};
 
-d2.addEventListener("change", () => {
-  if (!online) return;
-  client.publish("device/esp8266_01/light/d2", d2.checked ? "ON" : "OFF");
-});
+d2.onchange = ()=>{
+  if(online) client.publish("device/esp8266_01/light/d2", d2.checked?"ON":"OFF");
+};
 </script>
 
 </body>
