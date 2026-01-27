@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sensotik D1 Control</title>
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #020617; /* Dark theme based on first code */
+            color: white;
+            font-family: Arial, sans-serif;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        h2 { margin-bottom: 20px; color: #f8fafc; }
+
+        .toggler { width: 72px; -webkit-tap-highlight-color: transparent; }
+        .toggler input { display: none; }
+        .toggler label {
+            display: block;
+            position: relative;
+            width: 72px;
+            height: 36px;
+            border: 1px solid #334155;
+            border-radius: 36px;
+            background: #1e293b;
+            cursor: pointer;
+        }
+
+        .toggler label::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 25%;
+            width: 26px;
+            height: 26px;
+            background-color: #ef4444; /* Red for OFF */
+            border-radius: 100%;
+            transform: translateY(-50%) translateX(-50%);
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* SVG Icons Positioning */
+        .toggler label svg {
+            position: absolute;
+            top: 50%;
+            left: 25%;
+            width: 16px;
+            height: 16px;
+            transform: translateY(-50%) translateX(-50%);
+            z-index: 2;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .path { fill: none; stroke: #fff; stroke-width: 10px; stroke-linecap: round; }
+
+        /* Checked State (ON) */
+        .toggler input:checked + label::after {
+            left: 75%;
+            background-color: #22c55e; /* Green for ON */
+        }
+        .toggler input:checked + label svg { left: 75%; }
+
+        /* Icon Switch Logic */
+        .toggler-on { opacity: 0; }
+        .toggler input:checked + label .toggler-on { opacity: 1; }
+        .toggler input:checked + label .toggler-off { opacity: 0; }
+
+        #status { margin-top: 20px; font-size: 14px; color: #94a3b8; }
+    </style>
+</head>
+
+<body>
+
+
+
+<div class="toggler">
+    <input id="toggler-d1" type="checkbox">
+    <label for="toggler-d1">
+        <svg class="toggler-on" viewBox="0 0 130.2 130.2">
+            <polyline class="path" points="100.2,40.2 51.5,88.8 29.8,67.5"/>
+        </svg>
+        <svg class="toggler-off" viewBox="0 0 130.2 130.2">
+            <line class="path" x1="34.4" y1="34.4" x2="95.8" y2="95.8"/>
+            <line class="path" x1="95.8" y1="34.4" x2="34.4" y2="95.8"/>
+        </svg>
+    </label>
+</div>
+
+<p id="status">Connecting to MQTT...</p>
+
+<script>
+/* HiveMQ Connection Details */
+const client = mqtt.connect(
+  "wss://ce071fa01d034227b2fbc0fb1902e00f.s1.eu.hivemq.cloud:8884/mqtt",
+  {
+    username: "senso",
+    password: "b!sXjDd9LrE8D.r",
+    clientId: "web_d1_" + Math.random().toString(16).substr(2, 8)
+  }
+);
+
+const toggleInput = document.getElementById("toggler-d1");
+const statusText = document.getElementById("status");
+
+client.on("connect", () => {
+    statusText.innerText = "✅ Connected to D1";
+    // Subscribe to get current state from ESP
+    client.subscribe("sensotik/status/d1");
+});
+
+client.on("error", () => {
+    statusText.innerText = "❌ Connection Failed";
+});
+
+/* Send Command on Toggle */
+toggleInput.addEventListener("change", () => {
+    const message = toggleInput.checked ? "ON" : "OFF";
+    // Using topic 'sensotik/light' like your first code, but for D1
+    client.publish("sensotik/light", message, { retain: true });
+});
+
+/* Receive State Sync from Hardware */
+client.on("message", (topic, message) => {
+    if (topic === "sensotik/status/d1") {
+        toggleInput.checked = (message.toString() === "ON");
+    }
+});
+</script>
+
+</body>
+</html>
