@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ESP8266 Control Panel</title>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+<style>
+body{
+  margin:0;
+  height:100vh;
+  font-family:Arial;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#555;
+  color:white;
+  transition:0.4s;
+}
+
+.panel{
+  background:rgba(0,0,0,0.35);
+  padding:30px 40px;
+  border-radius:16px;
+  width:300px;
+  text-align:center;
+}
+
+.status{
+  margin-bottom:20px;
+  font-size:20px;
+}
+
+/* Toggle */
+.device{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin:15px 0;
+}
+
+.switch{
+  position:relative;
+  width:60px;
+  height:32px;
+}
+
+.switch input{
+  display:none;
+}
+
+.slider{
+  position:absolute;
+  inset:0;
+  background:#999;
+  border-radius:32px;
+  transition:.3s;
+}
+
+.slider::before{
+  content:"";
+  position:absolute;
+  width:24px;
+  height:24px;
+  left:4px;
+  top:4px;
+  background:white;
+  border-radius:50%;
+  transition:.3s;
+}
+
+input:checked + .slider{
+  background:#00e676;
+}
+
+input:checked + .slider::before{
+  transform:translateX(28px);
+}
+
+input:disabled + .slider{
+  background:#555;
+}
+</style>
+</head>
+
+<body>
+
+<div class="panel">
+  <div class="status" id="status">Checking ESP...</div>
+
+  <div class="device">
+    <span>D1 Light</span>
+    <label class="switch">
+      <input type="checkbox" id="d1" disabled>
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="device">
+    <span>D2 Light</span>
+    <label class="switch">
+      <input type="checkbox" id="d2" disabled>
+      <span class="slider"></span>
+    </label>
+  </div>
+</div>
+
+<script>
+const client = mqtt.connect(
+  "wss://ce071fa01d034227b2fbc0fb1902e00f.s1.eu.hivemq.cloud:8884/mqtt",
+  {
+    username:"senso",
+    password:"b!sXjDd9LrE8D.r",
+    clientId:"web_" + Math.random().toString(16).substr(2)
+  }
+);
+
+const d1 = document.getElementById("d1");
+const d2 = document.getElementById("d2");
+const statusTxt = document.getElementById("status");
+
+let online = false;
+
+client.on("connect", () => {
+  client.subscribe("device/esp8266_01/pong");
+
+  document.body.style.background = "#ff9800";
+  statusTxt.innerText = "Checking ESP...";
+
+  client.publish("device/esp8266_01/ping", "ping");
+
+  setTimeout(() => {
+    if (!online) {
+      document.body.style.background = "#c62828";
+      statusTxt.innerText = "ESP OFFLINE";
+    }
+  }, 2000);
+});
+
+client.on("message", (topic) => {
+  if (topic === "device/esp8266_01/pong") {
+    online = true;
+    document.body.style.background = "#2e7d32";
+    statusTxt.innerText = "ESP ONLINE";
+    d1.disabled = false;
+    d2.disabled = false;
+  }
+});
+
+d1.addEventListener("change", () => {
+  if (!online) return;
+  client.publish("device/esp8266_01/light/d1", d1.checked ? "ON" : "OFF");
+});
+
+d2.addEventListener("change", () => {
+  if (!online) return;
+  client.publish("device/esp8266_01/light/d2", d2.checked ? "ON" : "OFF");
+});
+</script>
+
+</body>
+</html>
