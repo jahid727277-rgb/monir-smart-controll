@@ -43,7 +43,7 @@ void setup() {
   digitalWrite(ALARM_PIN, LOW);
 
   WiFiManager wm;
-  wm.autoConnect("Alarm-Setup");
+  wm.autoConnect("Sensotik-Setup");
 
   config.database_url = FIREBASE_HOST;
   config.signer.tokens.legacy_token = FIREBASE_SECRET;
