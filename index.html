@@ -273,21 +273,21 @@ body {
 .days-selector { 
     display:grid; 
     grid-template-columns:repeat(7,1fr); 
-    gap:8px; 
-    justify-items:start;
+    gap:5px; 
 }
 .day-btn { 
-    padding:12px 8px; 
+    padding:10px 4px; 
     border:2px solid #fff; 
     background:#000; 
-    border-radius:10px; 
+    border-radius:8px; 
     cursor:pointer; 
-    font-size:12px; 
+    font-size:11px; 
     font-weight:600; 
     color:#fff; 
     transition:all 0.3s; 
     width:100%;
     outline: none;
+    text-align:center;
 }
 .day-btn.selected { background:#fff; color:#000; border-color:#fff; }
 
@@ -394,6 +394,14 @@ body {
 
 /* Time separator */
 .time-container span { color:#fff; }
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .day-btn { 
+        padding:8px 2px; 
+        font-size:10px; 
+    }
+}
 </style>
 </head>
 <body>
@@ -647,25 +655,4 @@ function displayAlarms(alarms){
             </div>
             <div class="alarm-controls">
                 <div class="toggle-switch ${alarm.active?'active':''}" onclick="toggleAlarm('${key}',${!alarm.active})"></div>
-                <button class="edit-btn" onclick='openEditModal("${key}", ${JSON.stringify(alarm).replace(/'/g, "&apos;")})'></button>
-            </div>
-        </div>`;
-    }).join('');
-}
-
-function toggleAlarm(key,active){ if(!alarmsRef) return; alarmsRef.child(key).update({active}); }
-
-document.getElementById('confirmOkBtn').addEventListener('click', ()=>{
-    if(deleteKey && alarmsRef){ 
-        alarmsRef.child(deleteKey).remove(); 
-        deleteKey=null; 
-        closeConfirm(); 
-    }
-});
-
-// Close modals on outside click
-document.getElementById('alarmModal').addEventListener('click', e=>{ if(e.target===document.getElementById('alarmModal')) closeModal(); });
-document.getElementById('confirmModal').addEventListener('click', e=>{ if(e.target===document.getElementById('confirmModal')) closeConfirm(); });
-</script>
-</body>
-</html>
+                <button class="edit-btn" onclick='openEditModal("${key}", ${JSON.stringify(alarm).replace(/'/g, "&apos;")})
