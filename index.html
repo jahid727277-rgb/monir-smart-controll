@@ -17,7 +17,7 @@
     -ms-user-select: none;
     user-select: none;
 }
-input, textarea {
+input, textarea, select {
     -webkit-user-select: text;
     -moz-user-select: text;
     -ms-user-select: text;
@@ -77,6 +77,7 @@ body {
     cursor:pointer; 
     transition:background 0.3s;
     outline: none;
+    flex-shrink: 0;
 }
 .toggle-switch.active { background:#fff; }
 .toggle-switch::after { content:''; position:absolute; width:22px; height:22px; background:#000; border-radius:50%; top:2px; left:2px; transition:left 0.3s; }
@@ -99,6 +100,7 @@ body {
     position: relative;
     overflow: hidden;
     outline: none;
+    flex-shrink: 0;
 }
 .edit-btn:hover { 
     background:#fff; 
@@ -108,36 +110,6 @@ body {
 .edit-btn::before {
     content: '✎';
     font-size: 18px;
-    font-weight: bold;
-    line-height: 1;
-}
-
-/* Delete Button */
-.delete-btn { 
-    background:#000; 
-    color:#fff; 
-    border:2px solid #fff; 
-    width:36px; 
-    height:36px; 
-    border-radius:8px; 
-    cursor:pointer; 
-    font-size:18px; 
-    transition:all 0.3s; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-    outline: none;
-}
-.delete-btn:hover { 
-    background:#fff; 
-    color:#000;
-    transform:scale(1.05) rotate(5deg); 
-}
-.delete-btn::before {
-    content: '×';
-    font-size: 28px;
     font-weight: bold;
     line-height: 1;
 }
@@ -273,10 +245,10 @@ body {
 .days-selector { 
     display:grid; 
     grid-template-columns:repeat(7,1fr); 
-    gap:5px; 
+    gap:6px; 
 }
 .day-btn { 
-    padding:10px 4px; 
+    padding:10px 5px; 
     border:2px solid #fff; 
     background:#000; 
     border-radius:8px; 
@@ -398,7 +370,7 @@ body {
 /* Responsive adjustments */
 @media (max-width: 480px) {
     .day-btn { 
-        padding:8px 2px; 
+        padding:9px 3px; 
         font-size:10px; 
     }
 }
@@ -450,7 +422,7 @@ body {
             </div>
             <div class="form-group">
                 <label>রিপিট হবে (দিন নির্বাচন করুন)</label>
-                <div class="days-selector">
+                <div class="days-selector" id="daysSelector">
                     <button type="button" class="day-btn" data-day="0">রবি</button>
                     <button type="button" class="day-btn" data-day="1">সোম</button>
                     <button type="button" class="day-btn" data-day="2">মঙ্গল</button>
@@ -490,169 +462,272 @@ const firebaseConfig = {
     appId: "1:435268128535:web:2a5f665c10295b704e7152",
     measurementId: "G-496B19VT2C"
 };
-let database, alarmsRef, selectedDays=[], deleteKey=null, editingKey=null;
+
+let database, alarmsRef, selectedDays = [], deleteKey = null, editingKey = null;
 const loaderEl = document.getElementById('loader');
 const alarmListEl = document.getElementById('alarmList');
 
-try{
+// Initialize Firebase
+try {
     firebase.initializeApp(firebaseConfig);
     database = firebase.database();
     alarmsRef = database.ref('alarms');
     loadAlarms();
-}catch(err){
+} catch(err) {
     console.error("Firebase সংযোগে ত্রুটি:", err);
     loaderEl.style.display = 'none';
-    alarmListEl.innerHTML='<div class="empty-state"><p>ডেটাবেস সংযোগে ব্যর্থতা।</p></div>';
+    alarmListEl.innerHTML = '<div class="empty-state"><p>ডেটাবেস সংযোগে ব্যর্থতা।</p></div>';
 }
 
-// Day buttons
-document.querySelectorAll('.day-btn').forEach(btn=>{
-    btn.addEventListener('click', function(){
-        this.classList.toggle('selected');
-        const day=parseInt(this.dataset.day);
-        if(selectedDays.includes(day)) selectedDays=selectedDays.filter(d=>d!==day);
-        else selectedDays.push(day);
+// Setup day button event listeners
+function setupDayButtons() {
+    document.querySelectorAll('.day-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            this.classList.toggle('selected');
+            const day = parseInt(this.dataset.day);
+            if (selectedDays.includes(day)) {
+                selectedDays = selectedDays.filter(d => d !== day);
+            } else {
+                selectedDays.push(day);
+            }
+        });
     });
-});
+}
 
-// Modals
-function openModal(){ 
+// Initialize day buttons
+setupDayButtons();
+
+// Open modal for new alarm
+function openModal() { 
     editingKey = null;
+    selectedDays = [];
     document.getElementById('modalTitle').textContent = 'নতুন ঘন্টা';
     document.getElementById('saveBtn').textContent = 'সেভ করুন';
     document.getElementById('deleteAlarmBtn').style.display = 'none';
     document.getElementById('alarmModal').classList.add('show'); 
-    selectedDays=[]; 
-    document.getElementById('alarmHour').value=''; 
-    document.getElementById('alarmMinute').value=''; 
-    document.getElementById('alarmAMPM').value='AM'; 
-    document.getElementById('alarmLabel').value=''; 
-    document.getElementById('alarmDuration').value='5';
-    document.querySelectorAll('.day-btn').forEach(btn=>btn.classList.remove('selected')); 
+    document.getElementById('alarmHour').value = ''; 
+    document.getElementById('alarmMinute').value = ''; 
+    document.getElementById('alarmAMPM').value = 'AM'; 
+    document.getElementById('alarmLabel').value = ''; 
+    document.getElementById('alarmDuration').value = '5';
+    document.querySelectorAll('.day-btn').forEach(btn => btn.classList.remove('selected')); 
 }
 
-function openEditModal(key, alarm){
-    editingKey = key;
-    document.getElementById('modalTitle').textContent = 'ঘন্টা এডিট করুন';
-    document.getElementById('saveBtn').textContent = 'আপডেট করুন';
-    document.getElementById('deleteAlarmBtn').style.display = 'block';
-    document.getElementById('alarmModal').classList.add('show');
-    
-    // Parse time
-    const timeParts = alarm.time.split(' ');
-    const time = timeParts[0].split(':');
-    const hour = parseInt(time[0]);
-    const minute = parseInt(time[1]);
-    const ampm = timeParts[1];
-    
-    document.getElementById('alarmHour').value = hour;
-    document.getElementById('alarmMinute').value = minute;
-    document.getElementById('alarmAMPM').value = ampm;
-    document.getElementById('alarmLabel').value = alarm.label;
-    document.getElementById('alarmDuration').value = alarm.duration || 5;
-    
-    selectedDays = alarm.days || [];
-    document.querySelectorAll('.day-btn').forEach(btn=>{
-        const day = parseInt(btn.dataset.day);
-        if(selectedDays.includes(day)){
-            btn.classList.add('selected');
-        } else {
-            btn.classList.remove('selected');
-        }
-    });
+// Open modal for editing alarm
+function openEditModal(key, alarmData) {
+    try {
+        editingKey = key;
+        selectedDays = [];
+        
+        document.getElementById('modalTitle').textContent = 'ঘন্টা এডিট করুন';
+        document.getElementById('saveBtn').textContent = 'আপডেট করুন';
+        document.getElementById('deleteAlarmBtn').style.display = 'block';
+        document.getElementById('alarmModal').classList.add('show');
+        
+        // Parse time
+        const timeParts = alarmData.time.split(' ');
+        const time = timeParts[0].split(':');
+        const hour = parseInt(time[0]);
+        const minute = parseInt(time[1]);
+        const ampm = timeParts[1];
+        
+        // Set form values
+        document.getElementById('alarmHour').value = hour;
+        document.getElementById('alarmMinute').value = minute;
+        document.getElementById('alarmAMPM').value = ampm;
+        document.getElementById('alarmLabel').value = alarmData.label || 'ঘন্টা';
+        document.getElementById('alarmDuration').value = alarmData.duration || 5;
+        
+        // Set selected days
+        selectedDays = alarmData.days || [0, 1, 2, 3, 4, 5, 6];
+        document.querySelectorAll('.day-btn').forEach(btn => {
+            const day = parseInt(btn.dataset.day);
+            if (selectedDays.includes(day)) {
+                btn.classList.add('selected');
+            } else {
+                btn.classList.remove('selected');
+            }
+        });
+    } catch(err) {
+        console.error('Error opening edit modal:', err);
+        alert('এডিট করতে সমস্যা হয়েছে');
+    }
 }
 
-function closeModal(){ 
+// Close modal
+function closeModal() { 
     document.getElementById('alarmModal').classList.remove('show'); 
     editingKey = null;
+    selectedDays = [];
 }
 
-function openConfirm(key){ deleteKey=key; document.getElementById('confirmModal').style.display='flex'; }
-function closeConfirm(){ deleteKey=null; document.getElementById('confirmModal').style.display='none'; }
+// Open delete confirmation
+function openConfirm(key) { 
+    deleteKey = key; 
+    document.getElementById('confirmModal').style.display = 'flex'; 
+}
 
-function deleteCurrentAlarm(){
-    if(editingKey){
+// Close delete confirmation
+function closeConfirm() { 
+    deleteKey = null; 
+    document.getElementById('confirmModal').style.display = 'none'; 
+}
+
+// Delete current alarm from edit modal
+function deleteCurrentAlarm() {
+    if (editingKey) {
         openConfirm(editingKey);
         closeModal();
     }
 }
 
-// Form Submit
-document.getElementById('alarmForm').addEventListener('submit', function(e){
+// Form submit handler
+document.getElementById('alarmForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    let hour=parseInt(document.getElementById('alarmHour').value);
-    let minute=parseInt(document.getElementById('alarmMinute').value);
-    const ampm=document.getElementById('alarmAMPM').value;
-    const duration=parseInt(document.getElementById('alarmDuration').value);
     
-    if(isNaN(hour) || isNaN(minute) || hour<1 || hour>12 || minute<0 || minute>59){ 
+    let hour = parseInt(document.getElementById('alarmHour').value);
+    let minute = parseInt(document.getElementById('alarmMinute').value);
+    const ampm = document.getElementById('alarmAMPM').value;
+    const duration = parseInt(document.getElementById('alarmDuration').value);
+    
+    // Validation
+    if (isNaN(hour) || isNaN(minute) || hour < 1 || hour > 12 || minute < 0 || minute > 59) { 
         alert('সঠিক সময় দিন'); 
         return; 
     }
     
-    if(isNaN(duration) || duration<1 || duration>300){ 
+    if (isNaN(duration) || duration < 1 || duration > 300) { 
         alert('সঠিক সেকেন্ড দিন (১-৩০০)'); 
         return; 
     }
     
-    const label=document.getElementById('alarmLabel').value || 'ঘন্টা';
-    const time=`${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')} ${ampm}`;
-    const alarm={
+    const label = document.getElementById('alarmLabel').value || 'ঘন্টা';
+    const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} ${ampm}`;
+    
+    const alarm = {
         active: true,
         time: time,
         duration: duration,
-        days: selectedDays.length>0 ? selectedDays : [0,1,2,3,4,5,6],
+        days: selectedDays.length > 0 ? selectedDays.sort((a, b) => a - b) : [0, 1, 2, 3, 4, 5, 6],
         label: label,
         timestamp: Date.now()
     };
     
-    if(editingKey){
+    if (editingKey) {
         updateAlarm(editingKey, alarm);
     } else {
         saveAlarm(alarm);
     }
 });
 
-function saveAlarm(alarm){
-    if(!alarmsRef){ alert('Firebase সংযুক্ত নেই'); return; }
-    alarmsRef.push(alarm).then(()=>closeModal()).catch(err=>alert(err.message));
+// Save new alarm
+function saveAlarm(alarm) {
+    if (!alarmsRef) { 
+        alert('Firebase সংযুক্ত নেই'); 
+        return; 
+    }
+    alarmsRef.push(alarm)
+        .then(() => closeModal())
+        .catch(err => alert('সেভ করতে সমস্যা হয়েছে: ' + err.message));
 }
 
-function updateAlarm(key, alarm){
-    if(!alarmsRef){ alert('Firebase সংযুক্ত নেই'); return; }
-    alarmsRef.child(key).update(alarm).then(()=>closeModal()).catch(err=>alert(err.message));
+// Update existing alarm
+function updateAlarm(key, alarm) {
+    if (!alarmsRef) { 
+        alert('Firebase সংযুক্ত নেই'); 
+        return; 
+    }
+    alarmsRef.child(key).update(alarm)
+        .then(() => closeModal())
+        .catch(err => alert('আপডেট করতে সমস্যা হয়েছে: ' + err.message));
 }
 
-function loadAlarms(){
-    if(!alarmsRef) return;
+// Load alarms from Firebase
+function loadAlarms() {
+    if (!alarmsRef) return;
     
     loaderEl.style.display = 'block';
     alarmListEl.innerHTML = ''; 
     alarmListEl.appendChild(loaderEl);
 
-    alarmsRef.on('value', snapshot=>{
+    alarmsRef.on('value', snapshot => {
         loaderEl.style.display = 'none';
-        const alarms=snapshot.val();
+        const alarms = snapshot.val();
         displayAlarms(alarms);
     });
 }
 
-function displayAlarms(alarms){
-    if(!alarms){
-        alarmListEl.innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10" stroke-width="2"/><path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/></svg><p>কোনো ঘন্টা নেই</p></div>';
+// Store alarms data globally for edit access
+let alarmsData = {};
+
+// Display alarms in UI
+function displayAlarms(alarms) {
+    alarmsData = alarms || {};
+    
+    if (!alarms) {
+        alarmListEl.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10" stroke-width="2"/><path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/></svg><p>কোনো ঘন্টা নেই</p></div>';
         return;
     }
-    const dayNames=['রবি','সোম','মঙ্গল','বুধ','বৃহঃ','শুক্র','শনি'];
-    alarmListEl.innerHTML=Object.entries(alarms).map(([key,alarm])=>{
-        const daysText = alarm.days.length===7 ? 'প্রতিদিন' : alarm.days.map(d=>dayNames[d]).join(', ');
+    
+    const dayNames = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র', 'শনি'];
+    
+    alarmListEl.innerHTML = Object.entries(alarms).map(([key, alarm]) => {
+        const daysText = alarm.days && alarm.days.length === 7 ? 'প্রতিদিন' : 
+                         alarm.days ? alarm.days.map(d => dayNames[d]).join(', ') : 'প্রতিদিন';
         const durationText = alarm.duration ? `${alarm.duration} সেকেন্ড বাজবে` : '';
-        return `<div class="alarm-item ${alarm.active?'active':''}">
+        
+        return `<div class="alarm-item ${alarm.active ? 'active' : ''}">
             <div class="alarm-info">
                 <div class="alarm-time">${alarm.time}</div>
                 <div class="alarm-days">${daysText}</div>
-                <div class="alarm-label">${alarm.label}</div>
+                <div class="alarm-label">${alarm.label || 'ঘন্টা'}</div>
                 ${durationText ? `<div class="alarm-duration">⏱️ ${durationText}</div>` : ''}
             </div>
             <div class="alarm-controls">
-                <div class="toggle-switch ${alarm.active?'active':''}" onclick="toggleAlarm('${key}',${!alarm.active})"></div>
-                <button class="edit-btn" onclick='openEditModal("${key}", ${JSON.stringify(alarm).replace(/'/g, "&apos;")})
+                <div class="toggle-switch ${alarm.active ? 'active' : ''}" onclick="toggleAlarm('${key}', ${!alarm.active})"></div>
+                <button class="edit-btn" onclick='editAlarm("${key}")'></button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// Edit alarm function
+function editAlarm(key) {
+    if (alarmsData[key]) {
+        openEditModal(key, alarmsData[key]);
+    }
+}
+
+// Toggle alarm active state
+function toggleAlarm(key, active) { 
+    if (!alarmsRef) return; 
+    alarmsRef.child(key).update({active: active}); 
+}
+
+// Confirm delete button click
+document.getElementById('confirmOkBtn').addEventListener('click', () => {
+    if (deleteKey && alarmsRef) { 
+        alarmsRef.child(deleteKey).remove()
+            .then(() => {
+                deleteKey = null; 
+                closeConfirm();
+            })
+            .catch(err => {
+                alert('মুছতে সমস্যা হয়েছে: ' + err.message);
+                closeConfirm();
+            }); 
+    }
+});
+
+// Close modals on outside click
+document.getElementById('alarmModal').addEventListener('click', e => { 
+    if (e.target === document.getElementById('alarmModal')) closeModal(); 
+});
+
+document.getElementById('confirmModal').addEventListener('click', e => { 
+    if (e.target === document.getElementById('confirmModal')) closeConfirm(); 
+});
+</script>
+</body>
+</html>
