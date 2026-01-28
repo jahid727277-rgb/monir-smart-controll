@@ -530,7 +530,7 @@ function loadAlarms() {
 
 function displayAlarms(alarms) {
     if (!alarms) {
-        alarmListEl.innerHTML = '<div class="empty-state"><p>কোন দিন সিলেক্ট করা হয়নি</p></div>';
+        alarmListEl.innerHTML = '<div class="empty-state"><p>কোন ঘন্টা নেইি</p></div>';
         return;
     }
     
@@ -539,7 +539,7 @@ function displayAlarms(alarms) {
     alarmListEl.innerHTML = Object.entries(alarms).map(([key, alarm]) => {
         const days = alarm.days && alarm.days.length > 0 
             ? alarm.days.map(d => dayNames[d]).join(', ') 
-            : 'কোন দিন নয়';
+            : 'কোন দিন সিলেক্ট করা হয়নি';
         
         return `
             <div class="alarm-item">
